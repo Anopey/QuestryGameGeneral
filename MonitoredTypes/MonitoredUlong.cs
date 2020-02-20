@@ -200,17 +200,17 @@ namespace QuestryGameGeneral.MonitoredTypes
 
         #region Bitwise Operators
 
-        public static int operator &(MonitoredSbyte f1, MonitoredSbyte f2)
+        public static ulong operator &(MonitoredUlong f1, MonitoredUlong f2)
         {
             return f1.value & f2.value;
         }
 
-        public static int operator |(MonitoredSbyte f1, MonitoredSbyte f2)
+        public static ulong operator |(MonitoredUlong f1, MonitoredUlong f2)
         {
             return f1.value | f2.value;
         }
 
-        public static int operator ^(MonitoredSbyte f1, MonitoredSbyte f2)
+        public static ulong operator ^(MonitoredUlong f1, MonitoredUlong f2)
         {
             return f1.value ^ f2.value;
         }
