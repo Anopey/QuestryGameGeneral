@@ -44,8 +44,6 @@
     <Compile Include="Calculations\VariableCalculations.cs" />
     <Compile Include="Converters\DateConverters.cs" />
     <Compile Include="Converters\ToBinary.cs" />
-    <Compile Include="EventSystems\ActionEvent.cs" />
-    <Compile Include="EventSystems\EmptyEvent.cs" />
     <Compile Include="MonitoredTypes\MonitoredFloat.cs" />
     <Compile Include="PathFinding\DijkstraQuery.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
