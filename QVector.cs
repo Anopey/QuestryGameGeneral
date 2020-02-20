@@ -6,7 +6,8 @@ using System.Text;
 namespace QuestryGameGeneral
 {
     
-    public class QVector
+    //TODO DECLARED INTERNAL WHILE IT IS BEING WORKED ON.
+    internal class QVector
     {
         private int Dimensions;
 

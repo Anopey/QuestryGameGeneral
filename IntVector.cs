@@ -5,7 +5,8 @@ using System.Text;
 
 namespace QuestryGameGeneral
 {
-    class IntVector
+    //TODO declared internal while it is being worked on.
+    internal class IntVector
     {
 
 
