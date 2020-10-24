@@ -13,8 +13,8 @@ namespace QuestryGameGeneral.PathFinding
         class Node
         {
             public T nodeObject;
-            public float distance = float.MaxValue;
-            public Dictionary<T, float> connectedNodes = new Dictionary<T, float>();
+            public float currentDistance = float.MaxValue;
+            public Dictionary<T, float> connectedNodesToDistance = new Dictionary<T, float>();
             public Node priorNode = null;
             public bool visited = false;
         }
@@ -66,9 +66,9 @@ namespace QuestryGameGeneral.PathFinding
             n = nodeMap[nodeObject];
             foreach (NodeLink l in connectedTo)
             {
-                if (!n.connectedNodes.ContainsKey(l.endObject))
+                if (!n.connectedNodesToDistance.ContainsKey(l.endObject))
                 {
-                    n.connectedNodes.Add(l.endObject, l.distance);
+                    n.connectedNodesToDistance.Add(l.endObject, l.distance);
                     if (!nodeMap.ContainsKey(l.endObject))
                     {
                         List<NodeLink> toBeAdded = new List<NodeLink>();
@@ -77,11 +77,11 @@ namespace QuestryGameGeneral.PathFinding
                     }
                     else
                     {
-                        if (!nodeMap[l.endObject].connectedNodes.ContainsKey(nodeObject))
-                            nodeMap[l.endObject].connectedNodes.Add(nodeObject, l.distance);
+                        if (!nodeMap[l.endObject].connectedNodesToDistance.ContainsKey(nodeObject))
+                            nodeMap[l.endObject].connectedNodesToDistance.Add(nodeObject, l.distance);
                     }
                 }
-                else if (n.connectedNodes[l.endObject] != l.distance)
+                else if (n.connectedNodesToDistance[l.endObject] != l.distance)
                 {
                     AddModifyNodeLink(nodeObject, l.endObject, l.distance);
                 }
@@ -113,7 +113,7 @@ namespace QuestryGameGeneral.PathFinding
             nodeMap.Remove(nodeObject);
             foreach (Node n in nodes)
             {
-                n.connectedNodes.Remove(nodeObject);
+                n.connectedNodesToDistance.Remove(nodeObject);
             }
         }
 
@@ -131,26 +131,26 @@ namespace QuestryGameGeneral.PathFinding
                 goto modify;
             if (!nodeMap.ContainsKey(node1) || !nodeMap.ContainsKey(node2))
                 return false;
-            else if ((nodeMap[node1].connectedNodes.ContainsKey(node2) && nodeMap[node1].connectedNodes[node2] == distance) ||
-                (nodeMap[node2].connectedNodes.ContainsKey(node1) && nodeMap[node2].connectedNodes[node1] == distance))
+            else if ((nodeMap[node1].connectedNodesToDistance.ContainsKey(node2) && nodeMap[node1].connectedNodesToDistance[node2] == distance) ||
+                (nodeMap[node2].connectedNodesToDistance.ContainsKey(node1) && nodeMap[node2].connectedNodesToDistance[node1] == distance))
                 return false;
             else
             {
-                if (nodeMap[node2].connectedNodes.ContainsKey(node1))
+                if (nodeMap[node2].connectedNodesToDistance.ContainsKey(node1))
                 {
-                    nodeMap[node2].connectedNodes[node1] = distance;
-                    nodeMap[node1].connectedNodes[node2] = distance;
+                    nodeMap[node2].connectedNodesToDistance[node1] = distance;
+                    nodeMap[node1].connectedNodesToDistance[node2] = distance;
                 }
                 else
                 {
-                    nodeMap[node1].connectedNodes.Add(node2, distance);
-                    nodeMap[node2].connectedNodes.Add(node1, distance);
+                    nodeMap[node1].connectedNodesToDistance.Add(node2, distance);
+                    nodeMap[node2].connectedNodesToDistance.Add(node1, distance);
                 }
                 return true;
             }
             modify:
-            nodeMap[node2].connectedNodes[node1] = distance;
-            nodeMap[node1].connectedNodes[node2] = distance;
+            nodeMap[node2].connectedNodesToDistance[node1] = distance;
+            nodeMap[node1].connectedNodesToDistance[node2] = distance;
             return true;
         }
 
@@ -163,8 +163,8 @@ namespace QuestryGameGeneral.PathFinding
                 return false;
             //if (nodeMap[node1].connectedNodes.ContainsKey(node2))
             //{
-            nodeMap[node1].connectedNodes.Remove(node2);
-            nodeMap[node2].connectedNodes.Remove(node1);
+            nodeMap[node1].connectedNodesToDistance.Remove(node2);
+            nodeMap[node2].connectedNodesToDistance.Remove(node1);
             //}
             return true;
         }
@@ -187,7 +187,7 @@ namespace QuestryGameGeneral.PathFinding
             ResetNodeInfos();
             priorityStack.Clear();
             Stack<T> path = new Stack<T>();
-            nodeMap[origin].distance = 0;
+            nodeMap[origin].currentDistance = 0;
             nodeMap[origin].visited = true;
             Node current = nodeMap[origin];
             do
@@ -202,18 +202,122 @@ namespace QuestryGameGeneral.PathFinding
                     }
                     return path;
                 }
-                foreach (T t in current.connectedNodes.Keys)
+                foreach (T t in current.connectedNodesToDistance.Keys)
                 {
                     if (nodeMap[t].visited)
                         continue;
-                    if (nodeMap[t].distance > current.distance + current.connectedNodes[t])
+                    if (nodeMap[t].currentDistance > current.currentDistance + current.connectedNodesToDistance[t])
                     {
                         Node n = nodeMap[t];
-                        n.distance = current.distance + current.connectedNodes[t];
+                        n.currentDistance = current.currentDistance + current.connectedNodesToDistance[t];
                         n.priorNode = current;
-                        if (!priorityStack.ContainsKey(n.distance))
-                            priorityStack[n.distance] = new Queue<T>();
-                        priorityStack[n.distance].Enqueue(t);
+                        if (!priorityStack.ContainsKey(n.currentDistance))
+                            priorityStack[n.currentDistance] = new Queue<T>();
+                        priorityStack[n.currentDistance].Enqueue(t);
+                    }
+                }
+                if (priorityStack.Count == 0)
+                    break;
+                var enumerator = priorityStack.Keys.GetEnumerator();
+                enumerator.MoveNext();
+                float first = enumerator.Current;
+                current = nodeMap[priorityStack[first].Dequeue()];
+                if (priorityStack[first].Count == 0)
+                    priorityStack.Remove(first);
+            } while (true);
+            return null;
+        }
+
+        /// <summary>
+        /// if one of the two input objects are not in the map or goal is to be excluded or when there is no valid path, will return a null path.
+        /// Otherwise, will return a path that starts from the first destination to the end goal.
+        /// </summary>
+        public Stack<T> FindPathButExclude(T origin, T goal, List<T> excluded)
+        {
+            if (!nodeMap.ContainsKey(origin) || !nodeMap.ContainsKey(goal) || nodeMap[origin] == nodeMap[goal] || excluded.Contains(goal))
+                return null;
+            ResetNodeInfos();
+            priorityStack.Clear();
+            Stack<T> path = new Stack<T>();
+            nodeMap[origin].currentDistance = 0;
+            nodeMap[origin].visited = true;
+            Node current = nodeMap[origin];
+            do
+            {
+                if (current == nodeMap[goal])
+                {
+                    //construct path.
+                    while (current != nodeMap[origin])
+                    {
+                        path.Push(current.nodeObject);
+                        current = current.priorNode;
+                    }
+                    return path;
+                }
+                foreach (T t in current.connectedNodesToDistance.Keys)
+                {
+                    if (nodeMap[t].visited || excluded.Contains(t))
+                        continue;
+                    if (nodeMap[t].currentDistance > current.currentDistance + current.connectedNodesToDistance[t])
+                    {
+                        Node n = nodeMap[t];
+                        n.currentDistance = current.currentDistance + current.connectedNodesToDistance[t];
+                        n.priorNode = current;
+                        if (!priorityStack.ContainsKey(n.currentDistance))
+                            priorityStack[n.currentDistance] = new Queue<T>();
+                        priorityStack[n.currentDistance].Enqueue(t);
+                    }
+                }
+                if (priorityStack.Count == 0)
+                    break;
+                var enumerator = priorityStack.Keys.GetEnumerator();
+                enumerator.MoveNext();
+                float first = enumerator.Current;
+                current = nodeMap[priorityStack[first].Dequeue()];
+                if (priorityStack[first].Count == 0)
+                    priorityStack.Remove(first);
+            } while (true);
+            return null;
+        }
+
+        /// <summary>
+        /// if one of the two input objects are not in the map or goal is to be excluded or when there is no valid path, will return a null path.
+        /// Otherwise, will return a path that starts from the first destination to the end goal.
+        /// </summary>
+        public Stack<T> FindPathButExclude(T origin, T goal, Func<T, bool> ShouldExclude)
+        {
+            if (!nodeMap.ContainsKey(origin) || !nodeMap.ContainsKey(goal) || nodeMap[origin] == nodeMap[goal] || ShouldExclude(goal))
+                return null;
+            ResetNodeInfos();
+            priorityStack.Clear();
+            Stack<T> path = new Stack<T>();
+            nodeMap[origin].currentDistance = 0;
+            nodeMap[origin].visited = true;
+            Node current = nodeMap[origin];
+            do
+            {
+                if (current == nodeMap[goal])
+                {
+                    //construct path.
+                    while (current != nodeMap[origin])
+                    {
+                        path.Push(current.nodeObject);
+                        current = current.priorNode;
+                    }
+                    return path;
+                }
+                foreach (T t in current.connectedNodesToDistance.Keys)
+                {
+                    if (nodeMap[t].visited || ShouldExclude(t))
+                        continue;
+                    if (nodeMap[t].currentDistance > current.currentDistance + current.connectedNodesToDistance[t])
+                    {
+                        Node n = nodeMap[t];
+                        n.currentDistance = current.currentDistance + current.connectedNodesToDistance[t];
+                        n.priorNode = current;
+                        if (!priorityStack.ContainsKey(n.currentDistance))
+                            priorityStack[n.currentDistance] = new Queue<T>();
+                        priorityStack[n.currentDistance].Enqueue(t);
                     }
                 }
                 if (priorityStack.Count == 0)
@@ -232,7 +336,7 @@ namespace QuestryGameGeneral.PathFinding
         {
             foreach (Node n in nodes)
             {
-                n.distance = float.MaxValue;
+                n.currentDistance = float.MaxValue;
                 n.priorNode = null;
                 n.visited = false;
             }
