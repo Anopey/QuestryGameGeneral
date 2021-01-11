@@ -22,7 +22,7 @@ namespace QuestryGameGeneral.Calculations
             if (number < 0) return 32;
             for (int i = 31; i >= 0; i--)
             {
-                if (number % Math.Pow(2, i) != number) return i + 1; //TODO Left here.
+                if (number % QMath.Pow(2, i) != number) return i + 1; //TODO Left here.
             }
             return 1;
         }
